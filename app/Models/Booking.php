@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\ParkingTransaction;
 
 class Booking extends Model
 {
@@ -39,5 +40,10 @@ class Booking extends Model
     public function transaction()
     {
         return $this->hasOne(ParkingTransaction::class);
+    }
+
+    public function parkingTransaction()
+    {
+        return $this->hasOne(ParkingTransaction::class, 'booking_id', 'id');
     }
 }

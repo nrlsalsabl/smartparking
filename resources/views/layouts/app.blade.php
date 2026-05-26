@@ -1,36 +1,198 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-    <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta name="csrf-token" content="{{ csrf_token() }}">
+<html lang="en">
 
-        <title>{{ config('app.name', 'Laravel') }}</title>
+<head>
 
-        <!-- Fonts -->
-        <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
+    <meta charset="UTF-8">
 
-        <!-- Scripts -->
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
-    </head>
-    <body class="font-sans antialiased">
-        <div class="min-h-screen bg-gray-100 dark:bg-gray-900">
-            @include('layouts.navigation')
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-            <!-- Page Heading -->
-            @isset($header)
-                <header class="bg-white dark:bg-gray-800 shadow">
-                    <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-                        {{ $header }}
-                    </div>
-                </header>
-            @endisset
+    <title>SmartPark</title>
 
-            <!-- Page Content -->
-            <main>
-                {{ $slot }}
-            </main>
+    @vite([
+    'resources/css/app.css',
+    'resources/js/app.js'
+    ])
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        body {
+            background: #f4f6f9;
+        }
+
+        .sidebar {
+            width: 260px;
+            min-height: 100vh;
+            background: #212529;
+            position: fixed;
+        }
+
+        .sidebar a {
+            display: block;
+            color: white;
+            text-decoration: none;
+            padding: 12px 18px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            transition: .3s;
+        }
+
+        .sidebar a:hover {
+            background: #343a40;
+        }
+
+        .main-content {
+            margin-left: 260px;
+            padding: 30px;
+        }
+
+        .topbar {
+            background: white;
+            padding: 20px;
+            border-radius: 20px;
+        }
+
+        .card-custom {
+            border: none;
+            border-radius: 20px;
+        }
+    </style>
+
+</head>
+
+<body>
+
+    <div class="d-flex">
+
+        {{-- SIDEBAR --}}
+        <div class="sidebar p-4">
+
+            <h2 class="text-white mb-4">
+                SmartPark
+            </h2>
+
+            <p class="text-secondary">
+                {{ auth()->user()->role->role_name }}
+            </p>
+
+            <hr class="text-secondary">
+
+            {{-- ADMIN --}}
+            @if(auth()->user()->role->role_name == 'admin')
+
+            <a href="/dashboard">
+                Dashboard
+            </a>
+
+            <a href="/vehicle-types">
+                Vehicle Types
+            </a>
+
+            <a href="/parking-areas">
+                Parking Areas
+            </a>
+
+            <a href="/transactions">
+                Transactions
+            </a>
+
+            @endif
+
+
+            {{-- CUSTOMER --}}
+            @if(auth()->user()->role->role_name == 'customer')
+
+            <a href="/dashboard">
+                Dashboard
+            </a>
+
+            <a href="/vehicles">
+                My Vehicles
+            </a>
+
+            <a href="/bookings">
+                My Bookings
+            </a>
+
+            @endif
+
+
+            {{-- OFFICER --}}
+            @if(auth()->user()->role->role_name == 'officer')
+
+            <a href="/dashboard">
+                Dashboard
+            </a>
+
+            <a href="/transactions">
+                Transactions
+            </a>
+
+            @endif
+
+
+            <hr class="text-secondary mt-4">
+
+            <form action="{{ route('logout') }}" method="POST">
+
+                @csrf
+
+                <button class="btn btn-danger w-100">
+                    Logout
+                </button>
+
+            </form>
+
         </div>
-    </body>
+
+
+
+        {{-- MAIN --}}
+        <div class="main-content w-100">
+
+            {{-- TOPBAR --}}
+            <div class="topbar shadow-sm mb-4">
+
+                <div class="d-flex
+                        justify-content-between
+                        align-items-center">
+
+                    <div>
+
+                        <h3 class="mb-1">
+
+                            Welcome,
+                            {{ auth()->user()->name }}
+
+                        </h3>
+
+                        <small class="text-secondary">
+
+                            Smart Parking Management System
+
+                        </small>
+
+                    </div>
+
+                    <span class="badge bg-primary fs-6">
+
+                        {{ auth()->user()->role->role_name }}
+
+                    </span>
+
+                </div>
+
+            </div>
+
+
+            {{-- CONTENT --}}
+            @yield('content')
+
+        </div>
+
+    </div>
+
+</body>
+
 </html>

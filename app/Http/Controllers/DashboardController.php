@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\Support\Facades\Auth;
 use App\Models\Booking;
+use App\Models\Vehicle;
+use App\Models\ParkingTransaction;
 
 class DashboardController extends Controller
 {
@@ -14,7 +16,27 @@ class DashboardController extends Controller
 
         if ($role == 'admin') {
 
-            return view('dashboard.admin');
+            $totalVehicles = Vehicle::count();
+
+            $totalBookings = Booking::count();
+
+            $totalTransactions = ParkingTransaction::count();
+
+           $chartData = ParkingTransaction::selectRaw(
+                'DATE(created_at) as date, COUNT(*) as total'
+            )
+            ->groupByRaw('DATE(created_at)')
+            ->orderByRaw('DATE(created_at) DESC')
+            ->take(7)
+            ->get()
+            ->reverse()
+            ->values();
+            return view('dashboard.admin', compact(
+                'totalVehicles',
+                'totalBookings',
+                'totalTransactions',
+                'chartData'
+            ));
 
         } elseif ($role == 'officer') {
 

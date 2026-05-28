@@ -65,7 +65,7 @@
     @if(isset($total))
 
     <a
-        href="/payment/{{ $booking->id }}"
+        href="/payment/{{ $transaction->id }}"
         class="btn btn-success w-100 mt-3"
     >
         Pay Now

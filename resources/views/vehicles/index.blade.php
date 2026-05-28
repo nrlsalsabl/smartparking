@@ -26,6 +26,29 @@
 
         <div class="card-body">
 
+            <form method="GET">
+
+                <div class="row mb-3">
+
+                    <div class="col-md-4">
+
+                        <input type="text" name="search" class="form-control" placeholder="Search plate number..."
+                            value="{{ $search }}">
+
+                    </div>
+
+                    <div class="col-md-2">
+
+                        <button class="btn btn-primary">
+                            Search
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </form>
+
             <table class="table table-bordered">
 
                 <thead>

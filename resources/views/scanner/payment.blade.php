@@ -41,7 +41,7 @@
 
         </h2>
 
-        <form action="/payment/{{ $transaction->id }}" method="POST">
+        <form action="/payments/{{ $transaction->id }}" method="POST">
 
             @csrf
 

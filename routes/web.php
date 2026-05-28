@@ -40,23 +40,50 @@ Route::get(
     [ParkingTransactionController::class, 'scan']
 );
 
-Route::get(
-    '/payment/{id}',
-    [ParkingTransactionController::class, 'payment']
-);
+/*
+|--------------------------------------------------------------------------
+| PAYMENT
+|--------------------------------------------------------------------------
+*/
 
-Route::post(
-    '/payment/{id}',
-    [ParkingTransactionController::class, 'processPayment']
-);
+Route::prefix('payments')->group(function () {
 
-Route::get('/payment/{id}', [ParkingTransactionController::class, 'payment']);
-Route::post('/payment/{id}/process', [ParkingTransactionController::class, 'processPayment']);
-Route::get('/payment/waiting/{id}', [ParkingTransactionController::class, 'waiting'])->name('payment.waiting');
-Route::get('/payment/status/{id}', [ParkingTransactionController::class, 'status']);
-Route::get('/payment/success/{id}', [ParkingTransactionController::class, 'success']);
-Route::get('/payment/failed/{id}', [ParkingTransactionController::class, 'failed']);
-Route::post('/payment/{id}/manual-success', [ParkingTransactionController::class, 'manualSuccess']);
+    Route::get(
+        '/{id}',
+        [ParkingTransactionController::class, 'payment']
+    );
+
+    Route::post(
+        '/process/{id}',
+        [ParkingTransactionController::class, 'processPayment']
+    );
+
+    Route::get(
+        '/waiting/{id}',
+        [ParkingTransactionController::class, 'waiting']
+    )->name('payment.waiting');
+
+    Route::get(
+        '/status/{id}',
+        [ParkingTransactionController::class, 'status']
+    );
+
+    Route::get(
+        '/success/{id}',
+        [ParkingTransactionController::class, 'success']
+    );
+
+    Route::get(
+        '/failed/{id}',
+        [ParkingTransactionController::class, 'failed']
+    );
+
+    Route::post(
+        '/manual-success/{id}',
+        [ParkingTransactionController::class, 'manualSuccess']
+    );
+
+});
 
 Route::get(
     '/dashboard',

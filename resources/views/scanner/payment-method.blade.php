@@ -86,7 +86,7 @@
         Status: {{ $transaction->status }}
     </div>
 
-    <form method="POST" action="/payment/{{ $transaction->id }}/process">
+    <form action="/payments/process/{{ $transaction->id }}" method="POST">
         @csrf
 
         <label>Pilih Metode Pembayaran</label>

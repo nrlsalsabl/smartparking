@@ -14,14 +14,33 @@ class VehicleController extends Controller
      */
     public function index()
     {
+        $search = request('search');
+
         $vehicles = Vehicle::with([
-            'user',
-            'vehicleType'
-        ])->latest()->paginate(10);
+            'vehicleType',
+            'user'
+        ])
+        ->when(
+            $search,
+            function ($query) use ($search) {
+
+                $query->where(
+                    'plate_number',
+                    'like',
+                    '%' . $search . '%'
+                );
+
+            }
+        )
+        ->latest()
+        ->paginate(10);
 
         return view(
             'vehicles.index',
-            compact('vehicles')
+            compact(
+                'vehicles',
+                'search'
+            )
         );
     }
 

@@ -80,9 +80,11 @@
 
                             <td>
 
-                                {!! QrCode::size(80)->generate(
-                                $item->qrCode->qr_token
-                                ) !!}
+                                {!! QrCode::size(250)
+                                    ->margin(3)
+                                    ->generate(
+                                        $item->qrCode->qr_token
+                                    ) !!}
 
                                 <br>
 

@@ -33,7 +33,7 @@
                             <th>Duration</th>
                             <th>Total</th>
                             <th>Status</th>
-                            <th>Action</th>
+                            {{-- <th>Action</th> --}}
 
                         </tr>
 

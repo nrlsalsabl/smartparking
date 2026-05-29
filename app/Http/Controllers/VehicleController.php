@@ -12,26 +12,25 @@ class VehicleController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $search = request('search');
+        $search = $request->search;
 
-        $vehicles = Vehicle::with([
-            'vehicleType',
-            'user'
-        ])
-        ->when(
-            $search,
-            function ($query) use ($search) {
-
-                $query->where(
-                    'plate_number',
-                    'like',
-                    '%' . $search . '%'
-                );
-
-            }
+        $vehicles = Vehicle::where(
+            'user_id',
+            auth()->id()
         )
+
+        ->when($search, function ($query) use ($search) {
+
+            $query->where(
+                'plate_number',
+                'like',
+                '%' . $search . '%'
+            );
+
+        })
+
         ->latest()
         ->paginate(10);
 
@@ -121,7 +120,7 @@ class VehicleController extends Controller
      */
     public function edit(string $id)
     {
-        $vehicle = Vehicle::findOrFail($id);
+        $vehicle = Vehicle::where('user_id',auth()->id())->findOrFail($id);
 
         $vehicleTypes = VehicleType::all();
 

@@ -7,6 +7,9 @@ use Illuminate\Http\Request;
 use App\Models\Payment;
 use App\Models\ParkingTransaction;
 use Carbon\Carbon;
+use App\Exports\TransactionExport;
+use Maatwebsite\Excel\Facades\Excel;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class ParkingTransactionController extends Controller
 {
@@ -16,14 +19,40 @@ class ParkingTransactionController extends Controller
     | TRANSACTION LIST
     |--------------------------------------------------------------------------
     */
-    public function index()
+
+    public function index(Request $request)
     {
+        $search = $request->search;
+
         $transactions = ParkingTransaction::with([
             'booking.vehicle',
             'booking.user'
-        ])->latest()->paginate(10);
+        ])
 
-        return view('transactions.index', compact('transactions'));
+        ->when($search, function ($query) use ($search) {
+
+            $query->whereHas('booking.vehicle', function ($q) use ($search) {
+
+                $q->where(
+                    'plate_number',
+                    'like',
+                    '%' . $search . '%'
+                );
+
+            });
+
+        })
+
+        ->latest()
+        ->paginate(10);
+
+        return view(
+            'transactions.index',
+            compact(
+                'transactions',
+                'search'
+            )
+        );
     }
 
 
@@ -43,8 +72,16 @@ class ParkingTransactionController extends Controller
             return view('scanner.failed', ['message' => 'QR not found']);
         }
 
-        if ($qr->expired_at < now()) {
-            return view('scanner.failed', ['message' => 'QR expired']);
+        if (
+            $qr->expired_at < now()
+            &&
+            $qr->booking->status == 'pending'
+        ) {
+
+            return view('scanner.failed', [
+                'message' => 'QR expired'
+            ]);
+
         }
 
         $booking = $qr->booking;
@@ -292,4 +329,28 @@ class ParkingTransactionController extends Controller
             'message' => 'success'
         ]);
     }
+
+    public function exportExcel()
+    {
+        return Excel::download(
+            new TransactionExport,
+            'laporan-transaksi.xlsx'
+        );
+    }
+
+    public function exportPdf()
+    {
+        $transactions = ParkingTransaction::with([
+            'booking.vehicle',
+            'booking.user'
+        ])->latest()->get();
+
+        $pdf = Pdf::loadView(
+            'transactions.pdf',
+            compact('transactions')
+        );
+
+        return $pdf->download('laporan-transaksi.pdf');
+    }
+    
 }

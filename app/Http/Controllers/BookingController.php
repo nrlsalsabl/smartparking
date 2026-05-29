@@ -17,10 +17,18 @@ class BookingController extends Controller
     public function index()
     {
         $bookings = Booking::with([
-            'vehicle',
-            'parkingArea',
-            'qrCode'
-        ])->latest()->paginate(10);
+        'vehicle',
+        'parkingArea',
+        'qrCode'
+        ])
+
+        ->where(
+            'user_id',
+            auth()->id()
+        )
+
+        ->latest()
+        ->paginate(10);
 
         return view(
             'bookings.index',
@@ -152,7 +160,7 @@ class BookingController extends Controller
      */
     public function destroy(string $id)
     {
-        $booking = Booking::findOrFail($id);
+        $booking = Booking::where('user_id',auth()->id())->findOrFail($id);
 
         $booking->delete();
 

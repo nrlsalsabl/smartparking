@@ -10,6 +10,7 @@ use App\Http\Controllers\VehicleController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\ParkingTransactionController;
 
+
 // Route::get('/', function () {
 //     return view('welcome');
 // });
@@ -90,7 +91,15 @@ Route::get(
     [DashboardController::class, 'index']
 )->middleware(['auth'])->name('dashboard');
 
+Route::get(
+    '/transactions/export/excel',
+    [ParkingTransactionController::class, 'exportExcel']
+);
 
+Route::get(
+    '/transactions/export/pdf',
+    [ParkingTransactionController::class, 'exportPdf']
+);
 
 /*
 |--------------------------------------------------------------------------

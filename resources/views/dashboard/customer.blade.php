@@ -76,17 +76,17 @@
 
                         <td>
                             @if($booking->status == 'active')
-                                <span class="badge bg-warning">Active</span>
+                            <span class="badge bg-warning">Active</span>
                             @else
-                                <span class="badge bg-success">Completed</span>
+                            <span class="badge bg-success">Completed</span>
                             @endif
                         </td>
 
                         <td>
                             @if($booking->parkingTransaction?->payment_status == 'paid')
-                                <span class="badge bg-success">Paid</span>
+                            <span class="badge bg-success">Paid</span>
                             @else
-                                <span class="badge bg-danger">Unpaid</span>
+                            <span class="badge bg-danger">Unpaid</span>
                             @endif
                         </td>
 
@@ -100,6 +100,43 @@
             </table>
 
         </div>
+    </div>
+
+    {{-- Activity Log --}}
+    <div class="card shadow mt-4">
+
+        <div class="card-header">
+
+            <b>My Activity</b>
+
+        </div>
+
+        <div class="card-body">
+
+            @forelse($logs as $log)
+
+            <div class="border-bottom py-2">
+
+                {{ $log->activity }}
+
+                <br>
+
+                <small class="text-secondary">
+
+                    {{ $log->created_at }}
+
+                </small>
+
+            </div>
+
+            @empty
+
+            Tidak ada aktivitas.
+
+            @endforelse
+
+        </div>
+
     </div>
 
 </div>

@@ -134,6 +134,11 @@ Route::middleware([
         [ParkingTransactionController::class, 'index']
     );
 
+    Route::get(
+        '/activity-log',
+        [ParkingTransactionController::class, 'activityLogs']
+    )->name('activity-log');
+
 });
 
 /*
@@ -157,28 +162,12 @@ Route::middleware([
         BookingController::class
     );
 
+    Route::get(
+        '/customer/activity-log',
+        [DashboardController::class, 'customerActivityLogs']
+    )->name('customer.activity-log');
+
 });
-
-
-
-// /*
-// |--------------------------------------------------------------------------
-// | OFFICER
-// |--------------------------------------------------------------------------
-// */
-
-// Route::middleware([
-//     'auth',
-//     'role:officer'
-// ])->group(function () {
-
-//     Route::post(
-//         '/checkout/{id}',
-//         [ParkingTransactionController::class, 'checkout']
-//     );
-
-// });
-
 
 
 /*

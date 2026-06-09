@@ -88,12 +88,12 @@
 
                                 <br>
 
-                                <a href="{{ url('/scan/' . $item->qrCode->qr_token) }}"
+                                {{-- <a href="{{ url('/scan/' . $item->qrCode->qr_token) }}"
                                     class="btn btn-success btn-sm mt-2">
 
                                     Scan QR
 
-                                </a>
+                                </a> --}}
 
                             </td>
 

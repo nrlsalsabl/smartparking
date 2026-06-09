@@ -79,8 +79,75 @@
             </h4>
 
             <div style="height:300px;">
-            <canvas id="parkingChart"></canvas>
+                <canvas id="parkingChart"></canvas>
             </div>
+
+        </div>
+
+    </div>
+
+
+    <div class="card shadow mt-4">
+
+        <div class="card-header">
+
+            <b>Activity Logs</b>
+
+        </div>
+
+        <div class="card-body">
+
+            <table class="table table-bordered">
+
+                <thead>
+
+                    <tr>
+
+                        <th>Activity</th>
+
+                        <th>IP Address</th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody>
+
+                    @forelse($logs as $log)
+
+                    <tr>
+
+                        <td>
+                            {{ str_replace('Anda', $log->user->name, $log->activity) }}
+                        </td>
+
+                        <td>
+
+                            {{ $log->ip_address }}
+
+                        </td>
+
+                    </tr>
+
+                    @empty
+
+                    <tr>
+
+                        <td colspan="2">
+
+                            Tidak ada aktivitas
+
+                        </td>
+
+                    </tr>
+
+                    @endforelse
+
+                </tbody>
+
+            </table>
+
+            {{ $logs->links() }}
 
         </div>
 
@@ -93,7 +160,6 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
-
     const chartData = @json($chartData);
 
     const labels =

@@ -97,6 +97,10 @@
                 Transactions
             </a>
 
+            <a href="/activity-log">
+                Activity Logs
+            </a>
+
             @endif
 
 
@@ -114,6 +118,13 @@
             <a href="/bookings">
                 My Bookings
             </a>
+
+            <li class="nav-item">
+                <a href="{{ route('customer.activity-log') }}" class="nav-link">
+                    <i class="fas fa-history"></i>
+                    <span>Activity Log</span>
+                </a>
+            </li>
 
             @endif
 

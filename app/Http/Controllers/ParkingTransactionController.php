@@ -10,6 +10,7 @@ use Carbon\Carbon;
 use App\Exports\TransactionExport;
 use Maatwebsite\Excel\Facades\Excel;
 use Barryvdh\DomPDF\Facade\Pdf;
+use App\Models\ActivityLog;
 
 class ParkingTransactionController extends Controller
 {
@@ -55,6 +56,21 @@ class ParkingTransactionController extends Controller
         );
     }
 
+    public function activityLogs(Request $request)
+    {
+        $search = $request->search;
+
+        $logs = ActivityLog::with('user')
+            ->when($search, function ($query) use ($search) {
+                $query->whereHas('user', function ($q) use ($search) {
+                    $q->where('name', 'like', '%' . $search . '%');
+                });
+            })
+            ->latest()
+            ->paginate(10);
+
+        return view('activity-log.index', compact('logs', 'search'));
+    }
 
 
     /*
@@ -102,6 +118,16 @@ class ParkingTransactionController extends Controller
                 'status' => 'active'
             ]);
 
+            ActivityLog::create([
+                'user_id' => $booking->user_id,
+                'activity' =>
+                    'Anda melakukan checkin menggunakan kendaraan ' .
+                    $booking->vehicle->vehicle_name .
+                    ' dan ' .
+                    $booking->vehicle->plate_number,
+                'ip_address' => request()->ip()
+            ]);
+
             return view('scanner.success', [
                 'title' => 'CHECKIN SUCCESS',
                 'message' => 'Vehicle entered parking area',
@@ -141,6 +167,16 @@ class ParkingTransactionController extends Controller
 
             $booking->update([
                 'status' => 'completed'
+            ]);
+
+            ActivityLog::create([
+                'user_id' => $booking->user_id,
+                'activity' =>
+                    'Anda melakukan checkout menggunakan kendaraan ' .
+                    $booking->vehicle->vehicle_name .
+                    ' dan ' .
+                    $booking->vehicle->plate_number,
+                'ip_address' => request()->ip()
             ]);
 
             return view('scanner.success', [
@@ -210,6 +246,14 @@ class ParkingTransactionController extends Controller
             'payment_proof' => $vaNumber,
             'payment_date' => null,
             'status' => 'pending'
+        ]);
+
+        ActivityLog::create([
+            'user_id' => $transaction->booking->user_id,
+            'activity' =>
+                'Anda melakukan pembayaran sebesar Rp ' .
+                number_format($transaction->total_price),
+            'ip_address' => request()->ip()
         ]);
 
         /*

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ActivityLog;
 use App\Models\Booking;
 use App\Models\ParkingArea;
 use App\Models\QrCode;
@@ -17,9 +18,9 @@ class BookingController extends Controller
     public function index()
     {
         $bookings = Booking::with([
-        'vehicle',
-        'parkingArea',
-        'qrCode'
+            'vehicle',
+            'parkingArea',
+            'qrCode'
         ])
 
         ->where(
@@ -126,6 +127,30 @@ class BookingController extends Controller
 
         ]);
 
+        /*
+        |--------------------------------------------------------------------------
+        | ACTIVITY LOG
+        |--------------------------------------------------------------------------
+        */
+
+        $vehicle = Vehicle::findOrFail(
+            $request->vehicle_id
+        );
+
+        ActivityLog::create([
+
+            'user_id' => auth()->id(),
+
+            'activity' =>
+                'Anda membuat booking menggunakan kendaraan ' .
+                $vehicle->vehicle_name .
+                ' dengan plat ' .
+                $vehicle->plate_number,
+
+            'ip_address' => $request->ip()
+
+        ]);
+
         return redirect()
             ->route('bookings.index')
             ->with('success', 'Booking created');
@@ -160,7 +185,10 @@ class BookingController extends Controller
      */
     public function destroy(string $id)
     {
-        $booking = Booking::where('user_id',auth()->id())->findOrFail($id);
+        $booking = Booking::where(
+            'user_id',
+            auth()->id()
+        )->findOrFail($id);
 
         $booking->delete();
 

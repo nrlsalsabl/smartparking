@@ -8,30 +8,34 @@ use Symfony\Component\HttpFoundation\Response;
 
 class RoleMiddleware
 {
-    public function handle(
-        Request $request,
-        Closure $next,
-        ...$roles
-    ): Response {
-
-        if (!auth()->check()) {
-
-            return redirect('/login');
+    public function handle(Request $request, Closure $next, ...$roles): Response
+    {
+        // 1. Cek apakah user sudah terautentikasi (Web Auth atau JWT Auth)
+        if (!auth()->check() && !auth('api')->check()) {
+            if ($request->is('api/*') || $request->wantsJson()) {
+                return response()->json(['message' => 'Unauthenticated.'], 401);
+            }
+            return redirect()->route('login');
         }
 
-        if (!auth()->user()->role) {
+        // Ambil data user dari guard yang aktif
+        $user = auth('api')->check() ? auth('api')->user() : auth()->user();
 
-            abort(403, 'Role not found');
+        // 2. Cek kesesuaian role user
+        if ($user && $user->role && in_array($user->role->role_name, $roles)) {
+            return $next($request);
         }
 
-        $userRole =
-            auth()->user()->role->role_name;
-
-        if (!in_array($userRole, $roles)) {
-
-            abort(403);
+        // 3. JIKA ROLE TIDAK SESUAI
+        // Jika URL diawali dengan 'api/', pastikan kembalikan JSON rapi (mencegah error panjang)
+        if ($request->is('api/*') || $request->wantsJson()) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Anda tidak memiliki hak akses untuk fitur ini.'
+            ], 403); 
         }
 
-        return $next($request);
+        // Jika diakses via browser web biasa
+        abort(403, 'Unauthorized action.');
     }
 }

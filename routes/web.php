@@ -9,6 +9,9 @@ use App\Http\Controllers\ParkingAreaController;
 use App\Http\Controllers\VehicleController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\ParkingTransactionController;
+use Illuminate\Support\Facades\Auth;
+use App\Models\Notification;
+use App\Http\Controllers\NotificationController;
 
 
 // Route::get('/', function () {
@@ -193,6 +196,16 @@ Route::middleware('auth')->group(function () {
         [ProfileController::class, 'destroy']
     )->name('profile.destroy');
 
+    Route::get('/notifications', [NotificationController::class, 'index'])
+        ->name('notifications.index');
+
+    Route::get('/notifications/count', [NotificationController::class, 'count']);
+
+    Route::get('/notifications/read/{id}', [NotificationController::class, 'read'])
+        ->name('notifications.read');
+
 });
+
+
 
 require __DIR__.'/auth.php';

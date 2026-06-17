@@ -9,6 +9,8 @@ use App\Models\QrCode;
 use App\Models\Vehicle;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use App\Models\Notification;
+use App\Models\User;
 
 class BookingController extends Controller
 {
@@ -150,6 +152,29 @@ class BookingController extends Controller
             'ip_address' => $request->ip()
 
         ]);
+
+        Notification::create([
+            'user_id' => auth()->id(),
+            'title' => 'Booking Berhasil',
+            'message' => 'Booking kendaraan ' . $vehicle->plate_number . ' berhasil dibuat',
+            'is_read' => false
+        ]);
+
+        $admins = User::whereHas('role', function ($q) {
+            $q->where('role_name', 'admin');
+        })->get();
+
+        foreach ($admins as $admin) {
+            Notification::create([
+                'user_id' => $admin->id,
+                'title' => auth()->user()->name . ' melakukan booking',
+                'message' =>
+                    'Kendaraan: ' . $booking->vehicle->vehicle_name .
+                    ' (' . $booking->vehicle->plate_number . ')' . "\n" .
+                    'Gate: ' . $booking->parkingArea->area_name,
+                'is_read' => false
+            ]);
+        }
 
         return redirect()
             ->route('bookings.index')

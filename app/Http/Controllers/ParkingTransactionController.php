@@ -11,16 +11,14 @@ use App\Exports\TransactionExport;
 use Maatwebsite\Excel\Facades\Excel;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Models\ActivityLog;
+use App\Models\Notification;
+use App\Models\User;
 
 class ParkingTransactionController extends Controller
 {
-
-    /*
-    |--------------------------------------------------------------------------
-    | TRANSACTION LIST
-    |--------------------------------------------------------------------------
-    */
-
+    /* =========================
+    | INDEX
+    ========================= */
     public function index(Request $request)
     {
         $search = $request->search;
@@ -29,33 +27,20 @@ class ParkingTransactionController extends Controller
             'booking.vehicle',
             'booking.user'
         ])
-
         ->when($search, function ($query) use ($search) {
-
             $query->whereHas('booking.vehicle', function ($q) use ($search) {
-
-                $q->where(
-                    'plate_number',
-                    'like',
-                    '%' . $search . '%'
-                );
-
+                $q->where('plate_number', 'like', "%$search%");
             });
-
         })
-
         ->latest()
         ->paginate(10);
 
-        return view(
-            'transactions.index',
-            compact(
-                'transactions',
-                'search'
-            )
-        );
+        return view('transactions.index', compact('transactions', 'search'));
     }
 
+    /* =========================
+    | ACTIVITY LOGS
+    ========================= */
     public function activityLogs(Request $request)
     {
         $search = $request->search;
@@ -63,7 +48,7 @@ class ParkingTransactionController extends Controller
         $logs = ActivityLog::with('user')
             ->when($search, function ($query) use ($search) {
                 $query->whereHas('user', function ($q) use ($search) {
-                    $q->where('name', 'like', '%' . $search . '%');
+                    $q->where('name', 'like', "%$search%");
                 });
             })
             ->latest()
@@ -72,12 +57,9 @@ class ParkingTransactionController extends Controller
         return view('activity-log.index', compact('logs', 'search'));
     }
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | SCAN QR (TIDAK DIUBAH LOGIC UTAMA)
-    |--------------------------------------------------------------------------
-    */
+    /* =========================
+    | SCAN QR (CHECKIN + CHECKOUT)
+    ========================= */
     public function scan($token)
     {
         $type = request('type');
@@ -88,23 +70,11 @@ class ParkingTransactionController extends Controller
             return view('scanner.failed', ['message' => 'QR not found']);
         }
 
-        if (
-            $qr->expired_at < now()
-            &&
-            $qr->booking->status == 'pending'
-        ) {
-
-            return view('scanner.failed', [
-                'message' => 'QR expired'
-            ]);
-
-        }
-
         $booking = $qr->booking;
 
-        /*
+        /* =====================
         | CHECKIN
-        */
+        ===================== */
         if ($type == 'checkin' && $booking->status == 'pending') {
 
             ParkingTransaction::create([
@@ -114,19 +84,35 @@ class ParkingTransactionController extends Controller
                 'status' => 'active'
             ]);
 
-            $booking->update([
-                'status' => 'active'
-            ]);
+            $booking->update(['status' => 'active']);
 
+            // ACTIVITY LOG (CUSTOMER)
             ActivityLog::create([
                 'user_id' => $booking->user_id,
                 'activity' =>
-                    'Anda melakukan checkin menggunakan kendaraan ' .
-                    $booking->vehicle->vehicle_name .
-                    ' dan ' .
-                    $booking->vehicle->plate_number,
+                    "Anda melakukan check-in menggunakan kendaraan {$booking->vehicle->plate_number}",
                 'ip_address' => request()->ip()
             ]);
+
+            // NOTIF CUSTOMER
+            Notification::create([
+                'user_id' => $booking->user_id,
+                'title' => 'Check-in Berhasil',
+                'message' => $booking->vehicle->plate_number . ' masuk area parkir',
+                'is_read' => false
+            ]);
+
+            // NOTIF ADMIN
+            $admins = User::whereHas('role', fn($q) => $q->where('role_name','admin'))->get();
+
+            foreach ($admins as $admin) {
+                Notification::create([
+                    'user_id' => $admin->id,
+                    'title' => 'CHECKIN - ' . $booking->user->name,
+                    'message' => $booking->vehicle->plate_number . ' masuk area parkir',
+                    'is_read' => false
+                ]);
+            }
 
             return view('scanner.success', [
                 'title' => 'CHECKIN SUCCESS',
@@ -135,9 +121,9 @@ class ParkingTransactionController extends Controller
             ]);
         }
 
-        /*
+        /* =====================
         | CHECKOUT
-        */
+        ===================== */
         if ($type == 'checkout' && $booking->status == 'active') {
 
             $transaction = ParkingTransaction::where('booking_id', $booking->id)
@@ -151,11 +137,9 @@ class ParkingTransactionController extends Controller
             $checkin = Carbon::parse($transaction->checkin_at);
             $checkout = now();
 
-            $duration = $checkin->diffInHours($checkout);
-            if ($duration < 1) $duration = 1;
+            $duration = max(1, $checkin->diffInHours($checkout));
 
             $vehicleType = $booking->vehicle->vehicleType;
-
             $total = $duration * $vehicleType->price_per_hour;
 
             $transaction->update([
@@ -165,19 +149,35 @@ class ParkingTransactionController extends Controller
                 'status' => 'completed'
             ]);
 
-            $booking->update([
-                'status' => 'completed'
-            ]);
+            $booking->update(['status' => 'completed']);
 
+            // ACTIVITY LOG
             ActivityLog::create([
                 'user_id' => $booking->user_id,
                 'activity' =>
-                    'Anda melakukan checkout menggunakan kendaraan ' .
-                    $booking->vehicle->vehicle_name .
-                    ' dan ' .
-                    $booking->vehicle->plate_number,
+                    "Anda sudah melakukan check-out menggunakan kendaraan {$booking->vehicle->plate_number}",
                 'ip_address' => request()->ip()
             ]);
+
+            // NOTIF CUSTOMER
+            Notification::create([
+                'user_id' => $booking->user_id,
+                'title' => 'Check-out Berhasil',
+                'message' => $booking->vehicle->plate_number . ' keluar dari parkir',
+                'is_read' => false
+            ]);
+
+            // NOTIF ADMIN
+            $admins = User::whereHas('role', fn($q) => $q->where('role_name','admin'))->get();
+
+            foreach ($admins as $admin) {
+                Notification::create([
+                    'user_id' => $admin->id,
+                    'title' => 'CHECKOUT - ' . $booking->user->name,
+                    'message' => $booking->vehicle->plate_number . ' keluar dari parkir',
+                    'is_read' => false
+                ]);
+            }
 
             return view('scanner.success', [
                 'title' => 'CHECKOUT SUCCESS',
@@ -189,188 +189,140 @@ class ParkingTransactionController extends Controller
             ]);
         }
 
-        return view('scanner.failed', [
-            'message' => 'Invalid action'
-        ]);
+        return view('scanner.failed', ['message' => 'Invalid action']);
     }
 
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | PAYMENT PAGE
-    |--------------------------------------------------------------------------
-    */
+    /* =========================
+    | PAYMENT
+    ========================= */
     public function payment($id)
     {
         $transaction = ParkingTransaction::findOrFail($id);
-
         return view('scanner.payment-method', compact('transaction'));
     }
 
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | PROCESS PAYMENT (SIMULATOR FIXED)
-    |--------------------------------------------------------------------------
-    */
     public function processPayment(Request $request, $id)
     {
         $transaction = ParkingTransaction::findOrFail($id);
-
         $method = $request->method;
 
-        // 👉 VA number
-        $vaNumber = null;
+        $vaNumber = match($method) {
+            'va_bca' => '014'.rand(1000000000,9999999999),
+            'va_mandiri' => '008'.rand(1000000000,9999999999),
+            'va_bni' => '009'.rand(1000000000,9999999999),
+            'va_bri' => '002'.rand(1000000000,9999999999),
+            default => null
+        };
 
-        if ($method == 'va_bca') {
-            $vaNumber = '014' . rand(1000000000, 9999999999);
-        } elseif ($method == 'va_mandiri') {
-            $vaNumber = '008' . rand(1000000000, 9999999999);
-        } elseif ($method == 'va_bni') {
-            $vaNumber = '009' . rand(1000000000, 9999999999);
-        } elseif ($method == 'va_bri') {
-            $vaNumber = '002' . rand(1000000000, 9999999999);
-        } else {
-            return redirect()->back()->with('error', 'Invalid payment method');
+        if (!$vaNumber) {
+            return back()->with('error','Invalid payment method');
         }
 
-        /*
-        | CREATE PAYMENT
-        */
         $payment = Payment::create([
             'transaction_id' => $transaction->id,
             'payment_method' => $method,
             'amount' => $transaction->total_price,
             'payment_proof' => $vaNumber,
-            'payment_date' => null,
             'status' => 'pending'
         ]);
 
+        /* =====================
+        | ACTIVITY + NOTIF (PENDING)
+        ===================== */
         ActivityLog::create([
             'user_id' => $transaction->booking->user_id,
-            'activity' =>
-                'Anda melakukan pembayaran sebesar Rp ' .
-                number_format($transaction->total_price),
+            'activity' => "Payment pending {$transaction->booking->vehicle->plate_number}",
             'ip_address' => request()->ip()
         ]);
 
-        /*
-        | TRANSACTION STATUS
-        */
-        $transaction->update([
-            'payment_status' => 'unpaid'
+        Notification::create([
+            'user_id' => $transaction->booking->user_id,
+            'title' => 'Pembayaran Diproses',
+            'message' => 'Pembayaran sedang diproses',
+            'is_read' => false
         ]);
 
-        /*
-        | SIMULATOR ENGINE
-        */
+        /* =====================
+        | SIMULASI PAYMENT SUCCESS
+        ===================== */
         dispatch(function () use ($payment, $transaction) {
 
             sleep(5);
 
-            // 👉 FIX: hanya hasil valid untuk transaction
-            $result = rand(1, 10) > 2 ? 'paid' : 'unpaid';
+            $result = rand(1,10) > 2 ? 'paid' : 'unpaid';
 
-            /*
-            | UPDATE PAYMENT
-            */
             $payment->update([
                 'status' => $result,
-                'payment_date' => $result === 'paid' ? now() : null,
-                'payment_proof' => $result === 'paid'
-                    ? 'SIMULATED-PROOF'
-                    : $payment->payment_proof
+                'payment_date' => $result == 'paid' ? now() : null,
             ]);
 
-            /*
-            | UPDATE TRANSACTION
-            */
             $transaction->update([
                 'payment_status' => $result
             ]);
+
+            /* =====================
+            | SUCCESS ONLY
+            ===================== */
+            if ($result == 'paid') {
+
+                // ACTIVITY LOG SUCCESS
+                ActivityLog::create([
+                    'user_id' => $transaction->booking->user_id,
+                    'activity' => "Payment SUCCESS {$transaction->booking->vehicle->plate_number}",
+                    'ip_address' => request()->ip()
+                ]);
+
+                // CUSTOMER NOTIF
+                Notification::create([
+                    'user_id' => $transaction->booking->user_id,
+                    'title' => 'Pembayaran Berhasil',
+                    'message' => 'Pembayaran sukses untuk ' . $transaction->booking->vehicle->plate_number,
+                    'is_read' => false
+                ]);
+
+                // ADMIN NOTIF
+                $admins = User::whereHas('role', fn($q) => $q->where('role_name','admin'))->get();
+
+                foreach ($admins as $admin) {
+                    Notification::create([
+                        'user_id' => $admin->id,
+                        'title' => 'PAYMENT SUCCESS - ' . $transaction->booking->user->name,
+                        'message' => $transaction->booking->vehicle->plate_number . ' sudah bayar',
+                        'is_read' => false
+                    ]);
+                }
+            }
 
         })->afterResponse();
 
         return redirect()->route('payment.waiting', $payment->id);
     }
 
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | WAITING PAGE
-    |--------------------------------------------------------------------------
-    */
-    public function waiting($paymentId)
+    public function waiting($id)
     {
-        $payment = Payment::findOrFail($paymentId);
-
-        return view('scanner.payment-waiting', compact('payment'));
+        return view('scanner.payment-waiting', [
+            'payment' => Payment::findOrFail($id)
+        ]);
     }
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | STATUS CHECK (AJAX)
-    |--------------------------------------------------------------------------
-    */
     public function status($id)
     {
-        $payment = Payment::findOrFail($id);
-
         return response()->json([
-            'status' => $payment->status
+            'status' => Payment::findOrFail($id)->status
         ]);
     }
 
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | SUCCESS PAGE
-    |--------------------------------------------------------------------------
-    */
     public function success($id)
     {
-        $payment = Payment::findOrFail($id);
-
-        return view('scanner.payment-success', compact('payment'));
+        return view('scanner.payment-success', [
+            'payment' => Payment::findOrFail($id)
+        ]);
     }
 
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | FAILED PAGE
-    |--------------------------------------------------------------------------
-    */
     public function failed($id)
     {
-        $payment = Payment::findOrFail($id);
-
-        return view('scanner.payment-failed', compact('payment'));
-    }
-
-    public function manualSuccess($id)
-    {
-        $payment = Payment::findOrFail($id);
-
-        // langsung sukseskan payment
-        $payment->update([
-            'status' => 'paid',
-            'payment_date' => now()
-        ]);
-
-        $transaction = ParkingTransaction::findOrFail($payment->transaction_id);
-
-        $transaction->update([
-            'payment_status' => 'paid'
-        ]);
-
-        return response()->json([
-            'message' => 'success'
+        return view('scanner.payment-failed', [
+            'payment' => Payment::findOrFail($id)
         ]);
     }
 
@@ -389,12 +341,8 @@ class ParkingTransactionController extends Controller
             'booking.user'
         ])->latest()->get();
 
-        $pdf = Pdf::loadView(
-            'transactions.pdf',
-            compact('transactions')
-        );
+        $pdf = Pdf::loadView('transactions.pdf', compact('transactions'));
 
         return $pdf->download('laporan-transaksi.pdf');
     }
-    
 }
